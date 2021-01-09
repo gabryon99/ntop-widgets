@@ -5,57 +5,56 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
+import { DatasourceType } from "./types/datasource-type";
+import { Transformation } from "./types/transformation";
 export namespace Components {
-    interface MyComponent {
-        /**
-          * The first name
-         */
-        "first": string;
-        /**
-          * The last name
-         */
-        "last": string;
-        /**
-          * The middle name
-         */
-        "middle": string;
+    interface NtopDatasource {
+        "ds_type": DatasourceType;
+    }
+    interface NtopWidget {
+        "height": string;
+        "transformation": Transformation;
+        "width": string;
     }
 }
 declare global {
-    interface HTMLMyComponentElement extends Components.MyComponent, HTMLStencilElement {
+    interface HTMLNtopDatasourceElement extends Components.NtopDatasource, HTMLStencilElement {
     }
-    var HTMLMyComponentElement: {
-        prototype: HTMLMyComponentElement;
-        new (): HTMLMyComponentElement;
+    var HTMLNtopDatasourceElement: {
+        prototype: HTMLNtopDatasourceElement;
+        new (): HTMLNtopDatasourceElement;
+    };
+    interface HTMLNtopWidgetElement extends Components.NtopWidget, HTMLStencilElement {
+    }
+    var HTMLNtopWidgetElement: {
+        prototype: HTMLNtopWidgetElement;
+        new (): HTMLNtopWidgetElement;
     };
     interface HTMLElementTagNameMap {
-        "my-component": HTMLMyComponentElement;
+        "ntop-datasource": HTMLNtopDatasourceElement;
+        "ntop-widget": HTMLNtopWidgetElement;
     }
 }
 declare namespace LocalJSX {
-    interface MyComponent {
-        /**
-          * The first name
-         */
-        "first"?: string;
-        /**
-          * The last name
-         */
-        "last"?: string;
-        /**
-          * The middle name
-         */
-        "middle"?: string;
+    interface NtopDatasource {
+        "ds_type": DatasourceType;
+    }
+    interface NtopWidget {
+        "height"?: string;
+        "transformation": Transformation;
+        "width"?: string;
     }
     interface IntrinsicElements {
-        "my-component": MyComponent;
+        "ntop-datasource": NtopDatasource;
+        "ntop-widget": NtopWidget;
     }
 }
 export { LocalJSX as JSX };
 declare module "@stencil/core" {
     export namespace JSX {
         interface IntrinsicElements {
-            "my-component": LocalJSX.MyComponent & JSXBase.HTMLAttributes<HTMLMyComponentElement>;
+            "ntop-datasource": LocalJSX.NtopDatasource & JSXBase.HTMLAttributes<HTMLNtopDatasourceElement>;
+            "ntop-widget": LocalJSX.NtopWidget & JSXBase.HTMLAttributes<HTMLNtopWidgetElement>;
         }
     }
 }
