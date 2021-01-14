@@ -1,5 +1,5 @@
 /**
- * ntop.org - 2021 (C)
+ * (C) 2021 - ntop.org
 */
 
 export enum DatasourceType {

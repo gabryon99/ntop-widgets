@@ -1,7 +1,8 @@
 /**
- * ntop.org - 2021 (C)
+ * (C) 2021 - ntop.org
 */
 
+import { Data } from "./data";
 import { Datasource } from "./datasource";
 
 interface NtopngRestV1Response {
@@ -22,7 +23,7 @@ interface WidgetResponsePayload {
     /**
      * An array of data fetched from the request datasource
      */
-    data: Object[];
+    data: Data[];
     /**
      * The datasource associated to the `data`
      */

@@ -25,7 +25,8 @@
     "@stencil/core": "2.3.0",
     "@types/chart.js": "^2.9.29",
     "chart.js": "^2.9.4",
-    "chartjs-plugin-colorschemes": "^0.4.0"
+    "chartjs-plugin-colorschemes": "^0.4.0",
+    "chartjs-plugin-datalabels": "^0.7.0"
   },
   "license": "MIT",
   "devDependencies": {

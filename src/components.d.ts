@@ -14,6 +14,7 @@ export namespace Components {
     interface NtopWidget {
         "height": string;
         "transformation": Transformation;
+        "update": number;
         "width": string;
     }
 }
@@ -42,6 +43,7 @@ declare namespace LocalJSX {
     interface NtopWidget {
         "height"?: string;
         "transformation": Transformation;
+        "update"?: number;
         "width"?: string;
     }
     interface IntrinsicElements {

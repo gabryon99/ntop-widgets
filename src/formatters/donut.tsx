@@ -1,9 +1,8 @@
 /**
- * ntop.org - 2021 (C)
+ * (C) 2021 - ntop.org
 */
 
 import Chart from 'chart.js';
-import { WidgetResponsePayload } from '../types/widget-response';
 
 import PieWidgetFormatter from './pie';
 
@@ -14,8 +13,8 @@ import PieWidgetFormatter from './pie';
 export default class DonutWidgetFormatter extends PieWidgetFormatter {
 
     /* Override the chart type. The pie and donut chart are the same. */
-    protected loadConfig(datasets: any[], labels: Set<string>, fetchedData: WidgetResponsePayload[]): Chart.ChartConfiguration {
-        const config = super.loadConfig(datasets, labels, fetchedData);
+    protected loadConfig(datasets: any[], labels: Set<string>): Chart.ChartConfiguration {
+        const config = super.loadConfig(datasets, labels);
         config.type = 'doughnut';
         return config;
     }

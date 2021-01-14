@@ -1,5 +1,5 @@
 /**
- * ntop.org - 2021 (C)
+ * (C) 2021 - ntop.org
 */
 export interface Formatter { 
     /**
@@ -7,7 +7,11 @@ export interface Formatter {
      */
     staticRender: () => HTMLElement; 
     /**
-     * Initialize the chart with the data provided.
+     * Initialize the formatter with the data provided.
      */
-    initChart: (shadowRoot: ShadowRoot, data: any) => void;
+    init: (shadowRoot: ShadowRoot, data: any) => void;
+    /**
+     * Update the formatter with the data provided.
+     */
+    update: (shadowRoot: ShadowRoot, data: any) => void;
 }

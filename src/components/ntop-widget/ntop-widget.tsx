@@ -1,5 +1,5 @@
 /**
- * ntop.org - 2021 (C)
+ * (C) 2021 - ntop.org
 */
 
 import { Component, Host, Element, h, State, Prop } from '@stencil/core';
@@ -12,9 +12,9 @@ import { FormatterMap } from '../../formatters/formatter-map';
 import { WidgetRequest } from '../../types/widget-request';
 
 declare global {
-    // expand the Window interface
+    // extend the Window interface
     interface Window {
-        __NTOPNG_WIDGET_CSRF__: string;
+        __NTOPNG_ORIGIN__: string;
     }
 }
 
@@ -27,6 +27,7 @@ export abstract class NtopWidget {
 
     private NTOPNG_ENDPOINT: string = "/lua/rest/v1/get/widget/data.lua";
 
+    @Prop() update: number = 1000;
     @Prop() transformation!: Transformation;
     @Prop() width: string;
     @Prop() height: string;
@@ -34,17 +35,38 @@ export abstract class NtopWidget {
     @Element() host: HTMLNtopWidgetElement;
     @State() fetchedData: WidgetDataResponse;
 
+    /**
+     * The selected formatter to style the widget.
+     */
     private selectedFormatter: Formatter;
+    /**
+     * A flag indicating if a formatter has been initialized by the widget.
+     */
+    private formatterInitialized: boolean = false;
 
     componentDidRender() {
-        if (this.fetchedData !== undefined) {
-            this.selectedFormatter.initChart(this.host.shadowRoot, this.fetchedData.rsp);
+        
+        if (this.fetchedData !== undefined && !this.formatterInitialized) {
+            this.selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
+            this.formatterInitialized = true;
+        }
+
+        if (this.fetchedData !== undefined && this.formatterInitialized) {
+            this.selectedFormatter.update(this.host.shadowRoot, this.fetchedData.rsp);
         }
     }
 
     async componentWillLoad() {
+
         this.selectedFormatter = new FormatterMap[this.transformation]({width: parseInt(this.width), height: parseInt(this.height)}); 
         this.fetchedData = await this.getWidgetData();
+        
+        if (this.update >= 0) {
+            // update the chart
+            setInterval(async () => {
+                this.fetchedData = await this.getWidgetData();
+            }, this.update);
+        }
     } 
 
     /**
@@ -75,21 +97,19 @@ export abstract class NtopWidget {
 
     async getWidgetData() {
 
-        const origin: string = "http://localhost:3000";
+        // use global origin or current origin
+        const origin: string = window.__NTOPNG_ORIGIN__ || location.origin;
         const endpoint: URL = new URL(this.NTOPNG_ENDPOINT, origin);
 
         const request: WidgetRequest = {datasources: this.serializeDatasources(), transformation: this.transformation};
-        if (window.__NTOPNG_WIDGET_CSRF__ !== undefined) {
-            request.csrf = window.__NTOPNG_WIDGET_CSRF__;
-        }
 
         try {
             const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), headers: {'Content-Type': 'application/json; charset=utf-8'}});
             return await response.json();
         }
         catch (e) {
-            console.error(e)
-            return {};
+            console.error(e);
+            return undefined;
         }
     }
 
