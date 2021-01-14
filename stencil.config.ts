@@ -17,16 +17,6 @@ export const config: Config = {
     },
     {
       type: 'www',
-      copy: [
-        {
-          src: 'js/d3.v3.js',
-          dest: 'lib/d3.v3.js'
-        },
-        {
-          src: 'js/nv.d3.js',
-          dest: 'lib/nv.d3.js'
-        }
-      ],
       serviceWorker: null, // disable service workers
     },
   ],

@@ -1,16 +1,14 @@
 /**
  * ntop.org - 2021 (C)
 */
-import { Component, Host, Element, h, State, Prop, Watch } from '@stencil/core';
+
+import { Component, Host, Element, h, State, Prop } from '@stencil/core';
 import { Datasource } from '../../types/datasource';
 import { DatasourceParamaters } from '../../types/datasource-params';
 import { Formatter } from '../../types/formatter';
 import { Transformation } from '../../types/transformation';
 import { WidgetDataResponse } from '../../types/widget-response';
-import PieWidgetFormatter from '../formatters/pie';
-
-const formattersMap = {};
-formattersMap["pie"] = PieWidgetFormatter;
+import { FormatterMap } from '../../formatters/formatter-map';
 
 @Component({
     tag: 'ntop-widget',
@@ -26,34 +24,36 @@ export abstract class NtopWidget {
     @Prop() height: string;
 
     @Element() host: HTMLNtopWidgetElement;
-    @State() datasources: NodeListOf<HTMLNtopDatasourceElement>;
-
     @State() fetchedData: WidgetDataResponse;
 
     private selectedFormatter: Formatter;
 
     componentDidRender() {
         if (this.fetchedData !== undefined) {
-            this.selectedFormatter.initChart(this.host.shadowRoot, this.fetchedData.rsp[0].data);
+            this.selectedFormatter.initChart(this.host.shadowRoot, this.fetchedData.rsp);
         }
     }
 
     async componentWillLoad() {
 
         const self = this; 
+        this.selectedFormatter = new FormatterMap[this.transformation](parseInt(this.width), parseInt(this.height)); 
 
-        this.selectedFormatter = new formattersMap[this.transformation](parseInt(this.width), parseInt(this.height)); 
-        this.datasources = this.host.querySelectorAll('ntop-datasource');
-
+        // stub
         setTimeout(async () => {
             self.fetchedData = await self.getWidgetData();
         }, 1000)
     } 
 
-    serializeDatasources() {
+    /**
+     * Serialize the contained <ntop-datasource> into an array of Datasources
+     * to be send to the ntopng instance.
+     */
+    private serializeDatasources() {
 
         const src: Array<Datasource> = new Array();
-        this.datasources.forEach(datasource => {
+        const datasources = this.host.querySelectorAll('ntop-datasource');
+        datasources.forEach(datasource => {
              
             const params: DatasourceParamaters = {};
             for (let i = 0; i < datasource.attributes.length; i++) {
@@ -88,13 +88,17 @@ export abstract class NtopWidget {
         }
     }
 
+    /**
+     * Render a loading screen for the widget when is fetching the data.
+     */
     renderLoading() {  
         return <div class='loading shine'></div>
     } 
 
     render() {
 
-        const myStyle = {width: this.width, height: this.height}
+        const myStyle = {width: this.width, height: this.height};
+
         return (
             <Host>
                 <div class='ntop-widget-container bg-white' style={myStyle}> 

@@ -1,8 +1,6 @@
 /**
  * ntop.org - 2021 (C)
 */
-
-
 export interface Formatter { 
     /**
      * Return the JSX formatted.

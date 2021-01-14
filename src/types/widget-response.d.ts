@@ -30,5 +30,5 @@ interface WidgetResponsePayload {
 }
 
 export interface WidgetDataResponse extends NtopngRestV1Response {
-    rsp: WidgetResponsePayload | WidgetResponsePayload[];
+    rsp: WidgetResponsePayload[];
 }
