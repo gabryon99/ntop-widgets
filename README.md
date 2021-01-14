@@ -37,3 +37,11 @@ Once the script tags have been included in your page you can use the ntop widget
 ```
 
 The `update` paramater indicates, in milliseconds, when refresh a widget.
+
+### Plugins Used
+
+* [Chart.js](https://www.chartjs.org/)
+
+* [chartjs-plugin-colorschemes](https://github.com/nagix/chartjs-plugin-colorschemes)
+
+* [chartjs-plugin-datalabels](https://github.com/chartjs/chartjs-plugin-datalabels)
