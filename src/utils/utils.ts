@@ -1,3 +1,5 @@
-export function format(first: string, middle: string, last: string): string {
-  return (first || '') + (middle ? ` ${middle}` : '') + (last ? ` ${last}` : '');
+export function cleanDataset(dataset: Chart.ChartDataSets) : Chart.ChartDataSets {
+  //const values = dataset.data as number[];
+  //const total = values.reduce((curr, prev) => curr + prev);
+  return dataset;
 }

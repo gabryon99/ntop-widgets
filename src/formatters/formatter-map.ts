@@ -2,6 +2,7 @@
  * ntop.org - 2021 (C)
 */
 
+import DonutWidgetFormatter from "./donut";
 import PieWidgetFormatter from "./pie";
 
 /**
@@ -10,4 +11,5 @@ import PieWidgetFormatter from "./pie";
  */
 export const FormatterMap = {
     pie: PieWidgetFormatter,
+    donut: DonutWidgetFormatter
 }

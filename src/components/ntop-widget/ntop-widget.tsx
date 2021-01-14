@@ -43,7 +43,7 @@ export abstract class NtopWidget {
     }
 
     async componentWillLoad() {
-        this.selectedFormatter = new FormatterMap[this.transformation](parseInt(this.width), parseInt(this.height)); 
+        this.selectedFormatter = new FormatterMap[this.transformation]({width: parseInt(this.width), height: parseInt(this.height)}); 
         this.fetchedData = await this.getWidgetData();
     } 
 
@@ -86,7 +86,6 @@ export abstract class NtopWidget {
         try {
             const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), headers: {'Content-Type': 'application/json; charset=utf-8'}});
             return await response.json();
-            // return JSON.parse(`{"rc":0,"rsp":[{"datasource":{"ds_type":"interface_packet_distro","params":{"ifid":0}},"data":[{"k":"64 <= 128","v":66638},{"k":"512 <= 1024","v":17690},{"k":"256 <= 512","v":16280}]}],"rc_str":"OK","rc_str_hr":"Success"}`);
         }
         catch (e) {
             console.error(e)
