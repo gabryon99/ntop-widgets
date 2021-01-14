@@ -14,4 +14,8 @@ export interface WidgetRequest {
      * The datasources requested
      */
     datasources: Datasource[];
+    /**
+     * The csrf to use to make the request.
+     */
+    csrf?: string;
 }

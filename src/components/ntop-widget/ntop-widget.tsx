@@ -9,6 +9,14 @@ import { Formatter } from '../../types/formatter';
 import { Transformation } from '../../types/transformation';
 import { WidgetDataResponse } from '../../types/widget-response';
 import { FormatterMap } from '../../formatters/formatter-map';
+import { WidgetRequest } from '../../types/widget-request';
+
+declare global {
+    // expand the Window interface
+    interface Window {
+        __NTOPNG_WIDGET_CSRF__: string;
+    }
+}
 
 @Component({
     tag: 'ntop-widget',
@@ -35,14 +43,8 @@ export abstract class NtopWidget {
     }
 
     async componentWillLoad() {
-
-        const self = this; 
         this.selectedFormatter = new FormatterMap[this.transformation](parseInt(this.width), parseInt(this.height)); 
-
-        // stub
-        setTimeout(async () => {
-            self.fetchedData = await self.getWidgetData();
-        }, 1000)
+        this.fetchedData = await this.getWidgetData();
     } 
 
     /**
@@ -73,14 +75,18 @@ export abstract class NtopWidget {
 
     async getWidgetData() {
 
-        // const origin: string = "http://localhost:3000";
-        // const endpoint: URL = new URL(this.NTOPNG_ENDPOINT, origin);
+        const origin: string = "http://localhost:3000";
+        const endpoint: URL = new URL(this.NTOPNG_ENDPOINT, origin);
 
-        // const request: WidgetRequest = {datasources: this.serializeDatasources(), transformation: Transformation[this.formatter.toUpperCase()]};
+        const request: WidgetRequest = {datasources: this.serializeDatasources(), transformation: this.transformation};
+        if (window.__NTOPNG_WIDGET_CSRF__ !== undefined) {
+            request.csrf = window.__NTOPNG_WIDGET_CSRF__;
+        }
+
         try {
-            // const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), mode: 'no-cors'})
-            // return await response.json();
-            return JSON.parse(`{"rc":0,"rsp":[{"datasource":{"ds_type":"interface_packet_distro","params":{"ifid":0}},"data":[{"k":"64 <= 128","v":66638},{"k":"512 <= 1024","v":17690},{"k":"256 <= 512","v":16280}]}],"rc_str":"OK","rc_str_hr":"Success"}`);
+            const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), headers: {'Content-Type': 'application/json; charset=utf-8'}});
+            return await response.json();
+            // return JSON.parse(`{"rc":0,"rsp":[{"datasource":{"ds_type":"interface_packet_distro","params":{"ifid":0}},"data":[{"k":"64 <= 128","v":66638},{"k":"512 <= 1024","v":17690},{"k":"256 <= 512","v":16280}]}],"rc_str":"OK","rc_str_hr":"Success"}`);
         }
         catch (e) {
             console.error(e)
@@ -101,6 +107,7 @@ export abstract class NtopWidget {
 
         return (
             <Host>
+                <slot></slot>
                 <div class='ntop-widget-container bg-white' style={myStyle}> 
                     {this.fetchedData === undefined ? this.renderLoading() : this.selectedFormatter.staticRender()}
                 </div>

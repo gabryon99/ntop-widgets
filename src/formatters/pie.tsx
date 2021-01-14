@@ -14,24 +14,17 @@ import { WidgetResponsePayload } from '../types/widget-response';
  */
 export default class PieWidgetFormatter implements Formatter {
 
-    private width: number;
-    private height: number;
- 
-    private canvas = <canvas class='pie-chart'></canvas>;
     private chart: Chart;
 
-    constructor(width: number, height: number) {
-        this.width = width;
-        this.height = height;
+    constructor(_: number, __: number) {
     } 
 
     initChart(shadowRoot: ShadowRoot, fetchedData: WidgetResponsePayload[]) { 
 
-        this.canvas.$elm$.style.width =  this.width;
-        this.canvas.$elm$.style.height =  this.height;
-
+        const canvas = shadowRoot.querySelector('canvas');
+        console.log(shadowRoot);
         const chartColors = {"red":"rgb(255, 99, 132)","orange":"rgb(255, 159, 64)","yellow":"rgb(255, 205, 86)","green":"rgb(75, 192, 192)","blue":"rgb(54, 162, 235)","purple":"rgb(153, 102, 255)","grey":"rgb(201, 203, 207)"}
-        const ctx = this.canvas.$elm$.getContext('2d');
+        const ctx = canvas.getContext('2d');
         const datasets = new Array();
         const labels: Set<string> = new Set();
 
@@ -91,13 +84,14 @@ export default class PieWidgetFormatter implements Formatter {
             }
         };
 
-        console.log(config)
+        this.chart = new Chart(ctx, config); 
+    }
 
-        this.chart = new Chart(ctx, config);
-
+    getChart() {
+        return this.chart;
     }
 
     staticRender(): HTMLElement {
-        return this.canvas;
+        return <canvas class='pie-chart'></canvas>;
     }
 }
