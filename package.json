@@ -25,12 +25,11 @@
     "@stencil/core": "2.3.0",
     "@types/chart.js": "^2.9.29",
     "chart.js": "^2.9.4",
-    "chartjs-plugin-colorschemes": "^0.4.0",
-    "chartjs-plugin-datalabels": "^0.7.0"
+    "chartjs-plugin-datalabels": "^0.7.0",
+    "color-hash": "^1.0.3"
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/chartjs-plugin-colorschemes": "^0.4.0",
     "@types/jest": "^26.0.15",
     "jest": "^26.6.3",
     "jest-cli": "^26.6.3"

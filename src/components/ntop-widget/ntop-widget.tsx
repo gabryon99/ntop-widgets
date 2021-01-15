@@ -2,7 +2,7 @@
  * (C) 2021 - ntop.org
 */
 
-import { Component, Host, Element, h, State, Prop } from '@stencil/core';
+import { Component, Host, Element, h, State, Prop, Method } from '@stencil/core';
 import { Datasource } from '../../types/datasource';
 import { DatasourceParamaters } from '../../types/datasource-params';
 import { Formatter } from '../../types/formatter';
@@ -29,8 +29,8 @@ export abstract class NtopWidget {
 
     @Prop() update: number = 1000;
     @Prop() transformation!: Transformation;
-    @Prop() width: string;
-    @Prop() height: string;
+    @Prop() width!: string;
+    @Prop() height!: string;
 
     @Element() host: HTMLNtopWidgetElement;
     @State() fetchedData: WidgetDataResponse;
@@ -38,36 +38,53 @@ export abstract class NtopWidget {
     /**
      * The selected formatter to style the widget.
      */
-    private selectedFormatter: Formatter;
+    private _selectedFormatter: Formatter;
     /**
      * A flag indicating if a formatter has been initialized by the widget.
      */
-    private formatterInitialized: boolean = false;
+    private _formatterInitialized: boolean = false;
+
+    private _intervalId: NodeJS.Timeout;
 
     componentDidRender() {
         
-        if (this.fetchedData !== undefined && !this.formatterInitialized) {
-            this.selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
-            this.formatterInitialized = true;
+        if (this.fetchedData !== undefined && !this._formatterInitialized) {
+            this._selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
+            this._formatterInitialized = true;
         }
 
-        if (this.fetchedData !== undefined && this.formatterInitialized) {
-            this.selectedFormatter.update(this.host.shadowRoot, this.fetchedData.rsp);
+        if (this.fetchedData !== undefined && this._formatterInitialized) {
+            this._selectedFormatter.update(this.host.shadowRoot, this.fetchedData.rsp);
         }
     }
 
     async componentWillLoad() {
+        this._selectedFormatter = new FormatterMap[this.transformation]({width: parseInt(this.width), height: parseInt(this.height)}); 
+        await this.updateWidget();
+    } 
 
-        this.selectedFormatter = new FormatterMap[this.transformation]({width: parseInt(this.width), height: parseInt(this.height)}); 
+    private async updateWidget() {
+
         this.fetchedData = await this.getWidgetData();
         
         if (this.update >= 0) {
             // update the chart
-            setInterval(async () => {
-                this.fetchedData = await this.getWidgetData();
-            }, this.update);
+            this._intervalId = setInterval(async () => { this.fetchedData = await this.getWidgetData(); }, this.update);
+            return;
         }
-    } 
+        
+    }
+
+    @Method()
+    public async forceUpdate() {
+
+        // if there is an interval timer then stops it's execution
+        if (this._intervalId !== undefined) {
+            clearTimeout(this._intervalId);
+        }
+        // update the widget
+        await this.updateWidget();
+    }
 
     /**
      * Serialize the contained <ntop-datasource> into an array of Datasources
@@ -95,7 +112,7 @@ export abstract class NtopWidget {
         return src;
     }
 
-    async getWidgetData() {
+    private async getWidgetData() {
 
         // use global origin or current origin
         const origin: string = window.__NTOPNG_ORIGIN__ || location.origin;
@@ -116,7 +133,7 @@ export abstract class NtopWidget {
     /**
      * Render a loading screen for the widget when is fetching the data.
      */
-    renderLoading() {  
+    private renderLoading() {  
         return <div class='loading shine'></div>
     } 
 
@@ -128,7 +145,7 @@ export abstract class NtopWidget {
             <Host>
                 <slot></slot>
                 <div class='ntop-widget-container bg-white' style={myStyle}> 
-                    {this.fetchedData === undefined ? this.renderLoading() : this.selectedFormatter.staticRender()}
+                    {this.fetchedData === undefined ? this.renderLoading() : this._selectedFormatter.staticRender()}
                 </div>
             </Host>
         );

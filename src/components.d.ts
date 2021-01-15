@@ -12,6 +12,7 @@ export namespace Components {
         "ds_type": DatasourceType;
     }
     interface NtopWidget {
+        "forceUpdate": () => Promise<void>;
         "height": string;
         "transformation": Transformation;
         "update": number;
@@ -41,10 +42,10 @@ declare namespace LocalJSX {
         "ds_type": DatasourceType;
     }
     interface NtopWidget {
-        "height"?: string;
+        "height": string;
         "transformation": Transformation;
         "update"?: number;
-        "width"?: string;
+        "width": string;
     }
     interface IntrinsicElements {
         "ntop-datasource": NtopDatasource;

@@ -9,7 +9,7 @@ import { Formatter } from "../types/formatter";
 import { WidgetResponsePayload } from '../types/widget-response';
 
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import {Paired12} from 'chartjs-plugin-colorschemes/src/colorschemes/colorschemes.brewer.js';
+import ColorHash from 'color-hash';
 
 /**
  * Define a new chart formatter for Pie Charts.
@@ -19,7 +19,6 @@ export default class PieWidgetFormatter implements Formatter {
 
     private chart: Chart;
     private _fetchedData: WidgetResponsePayload[];
-    private filteredFetchedData: WidgetResponsePayload[];
 
     private params: any;
 
@@ -35,10 +34,8 @@ export default class PieWidgetFormatter implements Formatter {
         
         const ctx = canvas.getContext('2d');
   
-        const {datasets, labels, filteredFetchedData} = this.buildDatasets(fetchedData);
+        const {datasets, labels} = this.buildDatasets(fetchedData);
         this._fetchedData = fetchedData;
-        this.filteredFetchedData = filteredFetchedData;
-
 
         const config: ChartConfiguration = this.loadConfig(datasets, labels);
         this.chart = new Chart(ctx, config); 
@@ -47,57 +44,33 @@ export default class PieWidgetFormatter implements Formatter {
     private buildDatasets(fetchedData: WidgetResponsePayload[]) {
 
         const datasets = new Array();
-        const filteredFetchedData: WidgetResponsePayload[] = new Array();
         const labels: Set<string> = new Set();
 
-        const LIMIT = 4;
+        const colorHash = new ColorHash({saturation: 0.75});
 
         for (let { data, datasource } of fetchedData) {
 
-            let other = 0;
-
-            const total = data.map(d => d.v).reduce((prev, curr) => prev + curr);
-            const filteredData: Array<Data> = new Array();
-
-            data.forEach((d) => {
-
-                const value = d.v;
-                const pctg = (100 * value) / total;
-                // console.log(`%: ${pctg.toFixed(2)}, value: ${value}, limit: ${LIMIT}`)
-
-                if (pctg < LIMIT) {
-                    other += value;
-                    return;
-                }
-               
-                filteredData.push({v: value, k: d.k, url: d.url});
-            });
-
-            filteredData.push({v: other, k: "Other", url: "https://ntop.org"});
-
-            // create a new dataset to add to the pie chart
-            const dataset = { data: filteredData.map((d: Data) => d.v), label: datasource.ds_type, backgroundColor: Paired12 };
-
             // insert the found label if not contained in the set
-            filteredData.forEach((d: Data) => {
+            data.forEach((d: Data) => {
                 if (labels.has(d.k)) return;
                 labels.add(d.k);
             });
+            
+            // create the array color using the colorHash function
+            const colors = Array.from(labels).map(label => colorHash.hex(label));
 
-            // update the data array
-            filteredFetchedData.push({data: filteredData, datasource: datasource});
-
+            // create a new dataset to add to the pie chart
+            const dataset = { data: data.map((d: Data) => d.v), label: datasource.ds_type, backgroundColor: colors };
             datasets.push(dataset);
         }
 
-        return {datasets: datasets, labels: labels, filteredFetchedData: filteredFetchedData};
+        return {datasets: datasets, labels: labels};
     }
 
     public update(_: ShadowRoot, fetchedData: WidgetResponsePayload[]) {
 
-        const {datasets, labels, filteredFetchedData} = this.buildDatasets(fetchedData);
+        const {datasets, labels} = this.buildDatasets(fetchedData);
         this._fetchedData = fetchedData;
-        this.filteredFetchedData = filteredFetchedData;
 
         this.chart.data.datasets = datasets;
         this.chart.data.labels = Array.from(labels);
@@ -140,7 +113,7 @@ export default class PieWidgetFormatter implements Formatter {
                     const activePoint = self.chart.getElementAtEvent(event) as any[];
                     if (activePoint[0] !== undefined) {
                         
-                        const data: Data = self.filteredFetchedData[activePoint[0]._datasetIndex].data[activePoint[0]._index];
+                        const data: Data = self._fetchedData[activePoint[0]._datasetIndex].data[activePoint[0]._index];
                         if (data.url !== undefined) {
                             location.href = data.url;
                         }
