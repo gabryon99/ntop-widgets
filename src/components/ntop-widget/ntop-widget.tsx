@@ -11,7 +11,10 @@ import { WidgetDataResponse } from '../../types/widget-response';
 import { FormatterMap } from '../../formatters/formatter-map';
 import { WidgetRequest } from '../../types/widget-request';
 
+const WIDGETS_UNKNOWN_DATASOURCE_TYPE: number = -51;
+
 declare global {
+
     // extend the Window interface
     interface Window {
         __NTOPNG_ORIGIN__: string;
@@ -49,11 +52,13 @@ export abstract class NtopWidget {
     componentDidRender() {
         
         if (this.fetchedData !== undefined && !this._formatterInitialized) {
+
+            if (this.fetchedData.rc === WIDGETS_UNKNOWN_DATASOURCE_TYPE) return;
+
             this._selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
             this._formatterInitialized = true;
         }
-
-        if (this.fetchedData !== undefined && this._formatterInitialized) {
+        else if (this.fetchedData !== undefined && this._formatterInitialized) {
             this._selectedFormatter.update(this.host.shadowRoot, this.fetchedData.rsp);
         }
     }
@@ -66,8 +71,8 @@ export abstract class NtopWidget {
     private async updateWidget() {
 
         this.fetchedData = await this.getWidgetData();
-        
-        if (this.update >= 0) {
+
+        if (this.update >= 0 && this.fetchedData.rc !== WIDGETS_UNKNOWN_DATASOURCE_TYPE) {
             // update the chart
             this._intervalId = setInterval(async () => { this.fetchedData = await this.getWidgetData(); }, this.update);
             return;
@@ -137,15 +142,22 @@ export abstract class NtopWidget {
         return <div class='loading shine'></div>
     } 
 
+    private renderErrorScreen() {
+        return <div class='error'>Error: unknown datasource type!</div>
+    }
+
     render() {
 
         const myStyle = {width: this.width, height: this.height};
+        const view = (this.fetchedData === undefined) ? 
+            this.renderLoading() : (this.fetchedData.rc === WIDGETS_UNKNOWN_DATASOURCE_TYPE) ? 
+                this.renderErrorScreen() : this._selectedFormatter.staticRender();
 
         return (
             <Host>
                 <slot></slot>
                 <div class='ntop-widget-container bg-white' style={myStyle}> 
-                    {this.fetchedData === undefined ? this.renderLoading() : this._selectedFormatter.staticRender()}
+                    {view}
                 </div>
             </Host>
         );

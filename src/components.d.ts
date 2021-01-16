@@ -5,11 +5,10 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
-import { DatasourceType } from "./types/datasource-type";
 import { Transformation } from "./types/transformation";
 export namespace Components {
     interface NtopDatasource {
-        "ds_type": DatasourceType;
+        "ds_type": string;
     }
     interface NtopWidget {
         "forceUpdate": () => Promise<void>;
@@ -39,7 +38,7 @@ declare global {
 }
 declare namespace LocalJSX {
     interface NtopDatasource {
-        "ds_type": DatasourceType;
+        "ds_type": string;
     }
     interface NtopWidget {
         "height": string;
