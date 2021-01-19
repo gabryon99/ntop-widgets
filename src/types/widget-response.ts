@@ -19,7 +19,7 @@ interface NtopngRestV1Response {
 /**
  * The payload contained inside the REST response
  */
-interface WidgetResponsePayload {
+export interface WidgetResponsePayload {
     /**
      * An array of data fetched from the request datasource
      */

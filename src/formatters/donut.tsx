@@ -13,7 +13,7 @@ import PieWidgetFormatter from './pie';
 export default class DonutWidgetFormatter extends PieWidgetFormatter {
 
     /* Override the chart type. The pie and donut chart are the same. */
-    protected loadConfig(datasets: any[], labels: Set<string>): Chart.ChartConfiguration {
+    protected loadConfig(datasets: any[], labels: string[]): Chart.ChartConfiguration {
         const config = super.loadConfig(datasets, labels);
         config.type = 'doughnut';
         return config;

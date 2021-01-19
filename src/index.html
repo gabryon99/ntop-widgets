@@ -8,6 +8,9 @@
     <script nomodule src="/build/ntop-widgets.js"></script>
   </head>
   <body>
+    <script>
+      window.__NTOPNG_ORIGIN__ = "http://localhost:3000"
+    </script>
     <ntop-widget transformation="pie" width="400px" height="400px">
       <ntop-datasource type="interface_packet_distro" params-ifid='0'></ntop-datasource>
     </ntop-widget>

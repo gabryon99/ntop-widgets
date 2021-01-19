@@ -6,14 +6,19 @@
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
 import { Transformation } from "./types/transformation";
+import { DisplayFormatter } from "./types/display-formatter";
 export namespace Components {
     interface NtopDatasource {
         "ds_type": string;
     }
     interface NtopWidget {
+        "displayFormatter": DisplayFormatter;
         "forceUpdate": () => Promise<void>;
         "height": string;
         "transformation": Transformation;
+        /**
+          * The refresh time for the widge,
+         */
         "update": number;
         "width": string;
     }
@@ -41,8 +46,12 @@ declare namespace LocalJSX {
         "ds_type": string;
     }
     interface NtopWidget {
+        "displayFormatter"?: DisplayFormatter;
         "height": string;
         "transformation": Transformation;
+        /**
+          * The refresh time for the widge,
+         */
         "update"?: number;
         "width": string;
     }

@@ -7,9 +7,8 @@ import Chart, { ChartConfiguration } from 'chart.js';
 import { Data } from '../types/data';
 import { Formatter } from "../types/formatter";
 import { WidgetResponsePayload } from '../types/widget-response';
-
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import ColorHash from 'color-hash';
+import { DisplayFormatter } from "../types/display-formatter";
 
 /**
  * Define a new chart formatter for Pie Charts.
@@ -28,10 +27,16 @@ export default class PieWidgetFormatter implements Formatter {
 
     public init(shadowRoot: ShadowRoot, fetchedData: WidgetResponsePayload[]) { 
 
-        const canvas = shadowRoot.querySelector('canvas');
-        canvas.width = this.params.width;
-        canvas.height = this.params.height;
+        const widgetContainer = shadowRoot.querySelector('.ntop-widget-container');
         
+        const pieContainer: HTMLDivElement = shadowRoot.querySelector('.pie-container');
+        pieContainer.style.width = this.params.width;
+        pieContainer.style.height = this.params.height;
+
+        const canvas = document.createElement('canvas');    
+        // insert pie canvas inside the pie-container
+        pieContainer.appendChild(canvas);
+
         const ctx = canvas.getContext('2d');
   
         const {datasets, labels} = this.buildDatasets(fetchedData);
@@ -39,45 +44,55 @@ export default class PieWidgetFormatter implements Formatter {
 
         const config: ChartConfiguration = this.loadConfig(datasets, labels);
         this.chart = new Chart(ctx, config); 
+
+        // create the legend container along with the legend 
+        const legendContainer = document.createElement("div");
+        legendContainer.classList.add('legend');
+        legendContainer.innerHTML = this.chart.generateLegend() as string;
+
+        // add the container inside the shadow root
+        widgetContainer.appendChild(legendContainer);
+        widgetContainer.appendChild(pieContainer);
     }
 
     private buildDatasets(fetchedData: WidgetResponsePayload[]) {
 
+        let labels: string[] = [];
         const datasets = new Array();
-        const labels: Set<string> = new Set();
-
-        const colorHash = new ColorHash({saturation: 0.75});
 
         for (let { data, datasource } of fetchedData) {
 
-            // insert the found label if not contained in the set
-            data.forEach((d: Data) => {
-                if (labels.has(d.k)) return;
-                labels.add(d.k);
-            });
-            
             // create the array color using the colorHash function
-            const colors = Array.from(labels).map(label => colorHash.hex(label));
+            labels = data.map(d => d.k);
+            const bgColors = ["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928"];
 
             // create a new dataset to add to the pie chart
-            const dataset = { data: data.map((d: Data) => d.v), label: datasource.ds_type, backgroundColor: colors };
+            const dataset = { data: data.map((d: Data) => d.v), label: datasource.ds_type, backgroundColor: bgColors };
             datasets.push(dataset);
         }
 
         return {datasets: datasets, labels: labels};
     }
 
-    public update(_: ShadowRoot, fetchedData: WidgetResponsePayload[]) {
+    public update(shadowRoot: ShadowRoot, fetchedData: WidgetResponsePayload[]) {
 
         const {datasets, labels} = this.buildDatasets(fetchedData);
         this._fetchedData = fetchedData;
 
         this.chart.data.datasets = datasets;
-        this.chart.data.labels = Array.from(labels);
-        this.chart.update();
+        this.chart.data.labels = labels;
+
+        const legendContainer = shadowRoot.querySelector('.legend');
+        legendContainer.innerHTML = this.chart.generateLegend() as string;
+        shadowRoot.querySelector('div.ntop-widget-container').prepend(legendContainer);
+
+        this.chart.update({
+            duration: 0,
+            easing: 'easeInOutCubic'
+        });
     }
 
-    protected loadConfig(datasets: any[], labels: Set<string>): Chart.ChartConfiguration {
+    protected loadConfig(datasets: any[], labels: string[]): Chart.ChartConfiguration {
         const self = this;
         return {
             type: 'pie',
@@ -88,24 +103,18 @@ export default class PieWidgetFormatter implements Formatter {
             },
             options: {
                 responsive: true,
-                aspectRatio: 1,
+                maintainAspectRatio: false,
                 layout: {
-                    padding: 50
+                    padding: {
+                        left: 0,
+                        right: 0,
+                        top: 16,
+                        bottom: 16
+                    }
                 },
                 plugins: {
                     datalabels: {
-                        color: 'black',
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: function(value, context) {
-                            
-                            const values = context.chart.data.datasets[context.datasetIndex].data as number[];
-                            const total = values.reduce((prev, curr) => prev + curr);
-                            const percentage = ((value / total) * 100).toFixed(2);
-                            const label = context.chart.data.labels[context.dataIndex];
-
-                            return `${label} (${percentage}%)`;
-                        }
+                        display: false
                     }
                 },
                 onClick: function(event) {
@@ -122,7 +131,46 @@ export default class PieWidgetFormatter implements Formatter {
                 },
                 legend: {
                     display: false,
-                    position: 'bottom',
+                },
+                legendCallback: function(chart) { 
+
+                    let MAX_LABELS = 5;
+                    const colors = chart.config.data.datasets[0].backgroundColor;
+                    const labels = chart.config.data.labels;
+                    const values = chart.data.datasets[0].data as number[];
+                    const total = values.reduce((prev, curr) => prev + curr);
+
+                    const text = new Array<string>(); 
+
+                    if (labels.length < MAX_LABELS) {
+                        MAX_LABELS = labels.length;
+                    }
+
+                    text.push('<ul class="pie-legend">'); 
+
+                    for (let i = 0; i < MAX_LABELS; i++) { 
+
+                        let value;
+
+                        switch (self.params.displayFormatter) {
+                            case DisplayFormatter.NONE:
+                                value = "";
+                                break;
+                            case DisplayFormatter.PERCENTAGE:
+                                value = `(<b>${((values[i] / total) * 100).toFixed(2)}%</b>)`;
+                                break;
+                            case DisplayFormatter.RAW:
+                                value = `(<b>${values[i]}</b>)`;
+                                break
+                        }
+
+                        text.push('<li>');
+                        text.push(`<span class='circle' style='background-color: ${colors[i]}'></span> ${labels[i]}${value}`)
+                        text.push('</li>'); 
+                    } 
+                    text.push('</ul>');
+
+                    return text.join(''); 
                 },
                 tooltips: {
                     callbacks: {
@@ -136,9 +184,22 @@ export default class PieWidgetFormatter implements Formatter {
 
                             const label: string = data.labels[tooltip.index] as string;
                             const currentValue: number = dataset.data[tooltip.index] as number;
-                            const percentage = ((currentValue / total) * 100).toFixed(2);
 
-                            return `${label}: ${percentage}%`;
+                            let value;
+
+                            switch (self.params.displayFormatter) {
+                                case DisplayFormatter.NONE:
+                                    value = "";
+                                    break;
+                                case DisplayFormatter.PERCENTAGE:
+                                    value = ': ' + ((currentValue / total) * 100).toFixed(2) + '%';
+                                    break;
+                                case DisplayFormatter.RAW:
+                                    value = ': ' + currentValue;
+                                    break
+                            }
+
+                            return `${label}${value}`;
                         }
                     }
                 },
@@ -154,6 +215,6 @@ export default class PieWidgetFormatter implements Formatter {
     }
 
     public staticRender(): HTMLElement {
-        return <canvas class='pie-chart'></canvas>;
+        return (<div class='pie-container'></div>);
     }
 }

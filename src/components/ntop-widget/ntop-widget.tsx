@@ -7,11 +7,11 @@ import { Datasource } from '../../types/datasource';
 import { DatasourceParamaters } from '../../types/datasource-params';
 import { Formatter } from '../../types/formatter';
 import { Transformation } from '../../types/transformation';
+import { DisplayFormatter } from "../../types/display-formatter";
 import { WidgetDataResponse } from '../../types/widget-response';
 import { FormatterMap } from '../../formatters/formatter-map';
 import { WidgetRequest } from '../../types/widget-request';
-
-const WIDGETS_UNKNOWN_DATASOURCE_TYPE: number = -51;
+import { RestCodes } from '../../types/rest';
 
 declare global {
 
@@ -30,10 +30,14 @@ export abstract class NtopWidget {
 
     private NTOPNG_ENDPOINT: string = "/lua/rest/v1/get/widget/data.lua";
 
+    /**
+     * The refresh time for the widge,
+     */
     @Prop() update: number = 1000;
     @Prop() transformation!: Transformation;
     @Prop() width!: string;
     @Prop() height!: string;
+    @Prop({attribute: 'display'}) displayFormatter: DisplayFormatter = DisplayFormatter.PERCENTAGE;
 
     @Element() host: HTMLNtopWidgetElement;
     @State() fetchedData: WidgetDataResponse;
@@ -53,7 +57,7 @@ export abstract class NtopWidget {
         
         if (this.fetchedData !== undefined && !this._formatterInitialized) {
 
-            if (this.fetchedData.rc === WIDGETS_UNKNOWN_DATASOURCE_TYPE) return;
+            if (this.fetchedData.rc === RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) return;
 
             this._selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
             this._formatterInitialized = true;
@@ -64,7 +68,7 @@ export abstract class NtopWidget {
     }
 
     async componentWillLoad() {
-        this._selectedFormatter = new FormatterMap[this.transformation]({width: parseInt(this.width), height: parseInt(this.height)}); 
+        this._selectedFormatter = new FormatterMap[this.transformation]({width: this.width, height: this.height, displayFormatter: this.displayFormatter}); 
         await this.updateWidget();
     } 
 
@@ -72,7 +76,7 @@ export abstract class NtopWidget {
 
         this.fetchedData = await this.getWidgetData();
 
-        if (this.update >= 0 && this.fetchedData.rc !== WIDGETS_UNKNOWN_DATASOURCE_TYPE) {
+        if (this.update >= 0 && this.fetchedData.rc !== RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) {
             // update the chart
             this._intervalId = setInterval(async () => { this.fetchedData = await this.getWidgetData(); }, this.update);
             return;
@@ -99,6 +103,7 @@ export abstract class NtopWidget {
 
         const src: Array<Datasource> = new Array();
         const datasources = this.host.querySelectorAll('ntop-datasource');
+        
         datasources.forEach(datasource => {
              
             const params: DatasourceParamaters = {};
@@ -148,15 +153,14 @@ export abstract class NtopWidget {
 
     render() {
 
-        const myStyle = {width: this.width, height: this.height};
         const view = (this.fetchedData === undefined) ? 
-            this.renderLoading() : (this.fetchedData.rc === WIDGETS_UNKNOWN_DATASOURCE_TYPE) ? 
+            this.renderLoading() : (this.fetchedData.rc === RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) ? 
                 this.renderErrorScreen() : this._selectedFormatter.staticRender();
 
         return (
             <Host>
                 <slot></slot>
-                <div class='ntop-widget-container bg-white' style={myStyle}> 
+                <div class='ntop-widget-container transparent'> 
                     {view}
                 </div>
             </Host>
