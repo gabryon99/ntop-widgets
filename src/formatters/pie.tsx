@@ -157,10 +157,10 @@ export default class PieWidgetFormatter implements Formatter {
                                 value = "";
                                 break;
                             case DisplayFormatter.PERCENTAGE:
-                                value = `(<b>${((values[i] / total) * 100).toFixed(2)}%</b>)`;
+                                value = ` (<b>${((values[i] / total) * 100).toFixed(2)}%</b>)`;
                                 break;
                             case DisplayFormatter.RAW:
-                                value = `(<b>${values[i]}</b>)`;
+                                value = ` (<b>${values[i]}</b>)`;
                                 break
                         }
 
