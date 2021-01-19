@@ -9,7 +9,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: red;
+  font-weight: bold;
+  border-radius: 0.375rem;
+  color: rgb(255, 73, 73);
 }
 
 .transparent {
@@ -41,11 +43,41 @@ ul.pie-legend {
 }
 
 ul.pie-legend li {
-  margin-left: 0;
   font-weight: 400;
   display: flex;
   align-items: center;
+  opacity: 0;
+  -webkit-animation: slideIn 0.35s 1 ease-in;
+  animation: slideIn 0.35s 1 ease-in;
+  -webkit-animation-fill-mode: forwards;
+  animation-fill-mode: forwards;
 }
+
+ul.pie-legend li:nth-child(5n+1) {
+  -webkit-animation-delay: 0.25s;
+  animation-delay: 0.25s;
+}
+
+ul.pie-legend  li:nth-child(5n+2) {
+  -webkit-animation-delay: 0.5s;
+  animation-delay: 0.5s;
+}
+
+ul.pie-legend li:nth-child(5n+3) {
+  -webkit-animation-delay: .75s;
+  animation-delay: .75s;
+}
+
+ul.pie-legend li:nth-child(5n+4) {
+  -webkit-animation-delay: 1.0s;
+  animation-delay: 1.0s;
+}
+
+ul.pie-legend li:nth-child(5n+5) {
+  -webkit-animation-delay: 1.25s;
+  animation-delay: 1.25s;
+}
+
 
 .circle {
   width: 1em;
@@ -78,6 +110,19 @@ ul.pie-legend li {
 @keyframes shine {
   0% {
     background-position: right;    
+  }
+}
+
+/* Animation steps */
+
+@keyframes slideIn {
+  0% {
+    opacity: 0.0;
+    margin-left: -1rem;
+  }
+  100% {
+    opacity: 1.0;
+    margin-left: 0;
   }
 }
 
