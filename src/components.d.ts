@@ -5,17 +5,18 @@
  * It contains typing information for all components that exist in this project.
  */
 import { HTMLStencilElement, JSXBase } from "@stencil/core/internal";
-import { Transformation } from "./types/transformation";
-import { DisplayFormatter } from "./types/display-formatter";
+import { DisplayFormatter } from "./types/DisplayFormatter";
 export namespace Components {
     interface NtopDatasource {
-        "ds_type": string;
+        "name"?: string;
+        "src": any;
+        "styles"?: string;
+        "type"?: string;
     }
     interface NtopWidget {
         "displayFormatter": DisplayFormatter;
-        "forceUpdate": () => Promise<void>;
         "height": string;
-        "transformation": Transformation;
+        "type": string;
         /**
           * The refresh time for the widge,
          */
@@ -43,12 +44,16 @@ declare global {
 }
 declare namespace LocalJSX {
     interface NtopDatasource {
-        "ds_type": string;
+        "name"?: string;
+        "onSrcChanged"?: (event: CustomEvent<string>) => void;
+        "src": any;
+        "styles"?: string;
+        "type"?: string;
     }
     interface NtopWidget {
         "displayFormatter"?: DisplayFormatter;
         "height": string;
-        "transformation": Transformation;
+        "type"?: string;
         /**
           * The refresh time for the widge,
          */

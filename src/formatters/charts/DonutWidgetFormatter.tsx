@@ -4,7 +4,7 @@
 
 import Chart from 'chart.js';
 
-import PieWidgetFormatter from './pie';
+import PieWidgetFormatter from './PieWidgetFormatter';
 
 /**
  * Define a new chart formatter for Donut Charts.

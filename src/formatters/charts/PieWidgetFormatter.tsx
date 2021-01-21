@@ -4,11 +4,12 @@
 
 import { h } from '@stencil/core';
 import Chart, { ChartConfiguration } from 'chart.js';
-import { Data } from '../types/data';
-import { Formatter } from "../types/formatter";
-import { WidgetResponsePayload } from '../types/widget-response';
+import { Formatter } from "../../types/Formatter";
+import { WidgetResponsePayload } from '../../types/WidgetRestResponse';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { DisplayFormatter } from "../types/display-formatter";
+import { DisplayFormatter } from "../../types/DisplayFormatter";
+import { NtopWidget } from '../../components/ntop-widget/ntop-widget';
+import { COLOR_PALETTE } from '../../utils/utils';
 
 /**
  * Define a new chart formatter for Pie Charts.
@@ -16,80 +17,65 @@ import { DisplayFormatter } from "../types/display-formatter";
  */
 export default class PieWidgetFormatter implements Formatter {
 
-    private chart: Chart;
-    private _fetchedData: WidgetResponsePayload[];
+    private _chart: Chart;
+    private _parentWidget: NtopWidget;
+    private _shadowRoot: ShadowRoot;
 
-    private params: any;
-
-    constructor(params: any) {
-        this.params = params;
+    constructor(widget: NtopWidget) {
+        this._parentWidget = widget;
     } 
 
-    public init(shadowRoot: ShadowRoot, fetchedData: WidgetResponsePayload[]) { 
+    public init(shadowRoot: ShadowRoot) { 
 
-        const widgetContainer = shadowRoot.querySelector('.ntop-widget-container');
+        this._shadowRoot = shadowRoot;
+
+        const canvas: HTMLCanvasElement = shadowRoot.getElementById('chart') as HTMLCanvasElement;    
+        const ctx = canvas.getContext('2d');
         
         const pieContainer: HTMLDivElement = shadowRoot.querySelector('.pie-container');
-        pieContainer.style.width = this.params.width;
-        pieContainer.style.height = this.params.height;
-
-        const canvas = document.createElement('canvas');    
-        // insert pie canvas inside the pie-container
-        pieContainer.appendChild(canvas);
-
-        const ctx = canvas.getContext('2d');
+        pieContainer.style.width = this._parentWidget.width;
+        pieContainer.style.height = this._parentWidget.height;
   
-        const {datasets, labels} = this.buildDatasets(fetchedData);
-        this._fetchedData = fetchedData;
+        const {datasets, labels} = this.buildDatasets();
 
         const config: ChartConfiguration = this.loadConfig(datasets, labels);
-        this.chart = new Chart(ctx, config); 
+        this._chart = new Chart(ctx, config); 
 
         // create the legend container along with the legend 
-        const legendContainer = document.createElement("div");
-        legendContainer.classList.add('legend');
-        legendContainer.innerHTML = this.chart.generateLegend() as string;
-
-        // add the container inside the shadow root
-        widgetContainer.appendChild(legendContainer);
-        widgetContainer.appendChild(pieContainer);
+        const legendContainer = shadowRoot.querySelector(".legend");
+        legendContainer.innerHTML = this._chart.generateLegend() as string;
     }
 
-    private buildDatasets(fetchedData: WidgetResponsePayload[]) {
+    private buildDatasets() {
 
-        let labels: string[] = [];
-        const datasets = new Array();
+        const restResponse = this._parentWidget._fetchedData.rsp;
+        const firstDatasource = restResponse[0];
 
-        for (let { data, datasource } of fetchedData) {
-
-            // create the array color using the colorHash function
-            labels = data.map(d => d.k);
-            const bgColors = ["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928"];
-
-            // create a new dataset to add to the pie chart
-            const dataset = { data: data.map((d: Data) => d.v), label: datasource.ds_type, backgroundColor: bgColors };
-            datasets.push(dataset);
-        }
+        const labels = firstDatasource.data.keys;
+        const datasets = [{
+            data: firstDatasource.data.values,
+            label: firstDatasource.data.label,
+            backgroundColor: COLOR_PALETTE
+        }];
 
         return {datasets: datasets, labels: labels};
     }
 
-    public update(shadowRoot: ShadowRoot, fetchedData: WidgetResponsePayload[]) {
+    public update() {
 
-        const {datasets, labels} = this.buildDatasets(fetchedData);
-        this._fetchedData = fetchedData;
+        if (this._chart === undefined) {
+            throw new Error("The chart has not been initialized!");
+        }
 
-        this.chart.data.datasets = datasets;
-        this.chart.data.labels = labels;
+        const {datasets, labels} = this.buildDatasets();
 
-        const legendContainer = shadowRoot.querySelector('.legend');
-        legendContainer.innerHTML = this.chart.generateLegend() as string;
-        shadowRoot.querySelector('div.ntop-widget-container').prepend(legendContainer);
+        this._chart.data.datasets = datasets;
+        this._chart.data.labels = labels;
 
-        this.chart.update({
-            duration: 0,
-            easing: 'easeInOutCubic'
-        });
+        const legendContainer = this._shadowRoot.querySelector('.legend');
+        legendContainer.innerHTML = this._chart.generateLegend() as string;
+
+        this._chart.update({duration: 0, easing: 'easeInOutCubic'});
     }
 
     protected loadConfig(datasets: any[], labels: string[]): Chart.ChartConfiguration {
@@ -99,10 +85,14 @@ export default class PieWidgetFormatter implements Formatter {
             plugins: [ChartDataLabels],
             data: {
                 datasets: datasets,
-                labels: Array.from(labels)
+                labels: labels
             },
             options: {
                 responsive: true,
+                animation: {
+                    animateScale: true,
+                    animateRotate: false
+                },
                 maintainAspectRatio: false,
                 layout: {
                     padding: {
@@ -119,13 +109,13 @@ export default class PieWidgetFormatter implements Formatter {
                 },
                 onClick: function(event) {
 
-                    const activePoint = self.chart.getElementAtEvent(event) as any[];
+                    const activePoint = self._chart.getElementAtEvent(event) as any[];
                     if (activePoint[0] !== undefined) {
                         
-                        const data: Data = self._fetchedData[activePoint[0]._datasetIndex].data[activePoint[0]._index];
-                        if (data.url !== undefined) {
-                            location.href = data.url;
-                        }
+                        //const data: Data = self._fetchedData[activePoint[0]._datasetIndex].data[activePoint[0]._index];
+                        //if (data.url !== undefined) {
+                        //    location.href = data.url;
+                        //}
                     }
 
                 },
@@ -152,7 +142,7 @@ export default class PieWidgetFormatter implements Formatter {
 
                         let value;
 
-                        switch (self.params.displayFormatter) {
+                        switch (self._parentWidget.displayFormatter) {
                             case DisplayFormatter.NONE:
                                 value = "";
                                 break;
@@ -187,7 +177,7 @@ export default class PieWidgetFormatter implements Formatter {
 
                             let value;
 
-                            switch (self.params.displayFormatter) {
+                            switch (self._parentWidget.displayFormatter) {
                                 case DisplayFormatter.NONE:
                                     value = "";
                                     break;
@@ -210,11 +200,9 @@ export default class PieWidgetFormatter implements Formatter {
         };
     }
 
-    public getChart() {
-        return this.chart;
-    }
+    public get chart() { return this._chart; }
 
-    public staticRender(): HTMLElement {
-        return (<div class='pie-container'></div>);
+    public staticRender() {
+        return [<div class='legend'></div>, <div class='pie-container'><canvas id='chart'></canvas></div>];
     }
 }

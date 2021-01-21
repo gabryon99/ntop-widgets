@@ -1,17 +1,18 @@
 /**
  * (C) 2021 - ntop.org
 */
+
 export interface Formatter { 
-    /**
-     * Return the JSX formatted.
-     */
-    staticRender: () => HTMLElement; 
+
+    staticRender: () => HTMLElement | Array<HTMLElement>; 
+
     /**
      * Initialize the formatter with the data provided.
      */
-    init: (shadowRoot: ShadowRoot, data: any) => void;
+    init: (shadowRoot: ShadowRoot) => void;
+
     /**
      * Update the formatter with the data provided.
      */
-    update: (shadowRoot: ShadowRoot, data: any) => void;
+    update: () => void;
 }

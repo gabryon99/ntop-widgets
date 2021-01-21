@@ -2,34 +2,39 @@
  * (C) 2021 - ntop.org
 */
 
-import { Data } from "./data";
-import { Datasource } from "./datasource";
+import { Datasource } from "./Datasource";
+import { RestCode } from "./RestCode";
 
 interface NtopngRestV1Response {
     /* The payload contained inside the REST response */
-    rsp: Object | Array<Object>;
+    rsp: Object;
     /* A short description about the status of the REST request */
     rc_str_hr: string;
     /* A human-readable name for the response code */
     rc_str: string;
     /* Return Code of the REST response */
-    rc: number;
+    rc: RestCode;
+}
+
+interface DatasourceMetadata {
+    url?: string;
 }
 
 /**
  * The payload contained inside the REST response
  */
 export interface WidgetResponsePayload {
-    /**
-     * An array of data fetched from the request datasource
-     */
-    data: Data[];
-    /**
-     * The datasource associated to the `data`
-     */
+
+    data: {
+        values: Array<number>;
+        keys: Array<string>;
+        label?: string;
+    };
+
+    metadata?: DatasourceMetadata;
     datasource: Datasource;
 }
 
-export interface WidgetDataResponse extends NtopngRestV1Response {
-    rsp: WidgetResponsePayload[];
+export interface WidgetRestResponse extends NtopngRestV1Response {
+    rsp: Array<WidgetResponsePayload>;
 }

@@ -2,16 +2,15 @@
  * (C) 2021 - ntop.org
 */
 
-import { Component, Host, Element, h, State, Prop, Method } from '@stencil/core';
-import { Datasource } from '../../types/datasource';
-import { DatasourceParamaters } from '../../types/datasource-params';
-import { Formatter } from '../../types/formatter';
-import { Transformation } from '../../types/transformation';
-import { DisplayFormatter } from "../../types/display-formatter";
-import { WidgetDataResponse } from '../../types/widget-response';
-import { FormatterMap } from '../../formatters/formatter-map';
-import { WidgetRequest } from '../../types/widget-request';
-import { RestCodes } from '../../types/rest';
+import { Component, Host, Element, h, State, Prop, Method, Watch, Listen } from '@stencil/core';
+import { Formatter } from '../../types/Formatter';
+import { DisplayFormatter } from "../../types/DisplayFormatter";
+import { WidgetRestResponse } from '../../types/WidgetRestResponse';
+import { FormatterMap } from '../../formatters/FormatterMap';
+import { RestCode } from '../../types/RestCode';
+import { WidgetRestRequest } from '../../types/WidgetRestRequest';
+import { Datasource } from '../../types/Datasource';
+import { NtopDatasource } from './ntop-datasource';
 
 declare global {
 
@@ -34,92 +33,132 @@ export abstract class NtopWidget {
      * The refresh time for the widge,
      */
     @Prop() update: number = 1000;
-    @Prop() transformation!: Transformation;
+    @Prop() type: string;
+
     @Prop() width!: string;
     @Prop() height!: string;
+    
     @Prop({attribute: 'display'}) displayFormatter: DisplayFormatter = DisplayFormatter.PERCENTAGE;
 
     @Element() host: HTMLNtopWidgetElement;
-    @State() fetchedData: WidgetDataResponse;
+    @State() _fetchedData: WidgetRestResponse;
+
+    _containedDatasources: Array<NtopDatasource> = [];
 
     /**
      * The selected formatter to style the widget.
      */
     private _selectedFormatter: Formatter;
     /**
-     * A flag indicating if a formatter has been initialized by the widget.
+     * A flag indicating if the viewer has been initialized by the widget.
      */
-    private _formatterInitialized: boolean = false;
-
+    private _viewerInitialized: boolean = false;
+    /**
+     * An interval ID used to manage the internal Interval Timer.
+     */
     private _intervalId: NodeJS.Timeout;
+
+    private _mutationObserver: MutationObserver;
 
     componentDidRender() {
         
-        if (this.fetchedData !== undefined && !this._formatterInitialized) {
+        if (this._fetchedData !== undefined && !this._viewerInitialized) {
 
-            if (this.fetchedData.rc === RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) return;
+            if (this._fetchedData.rc < RestCode.SUCCESS) return;
 
-            this._selectedFormatter.init(this.host.shadowRoot, this.fetchedData.rsp);
-            this._formatterInitialized = true;
+            this._selectedFormatter.init(this.host.shadowRoot);
+            this._viewerInitialized = true;
         }
-        else if (this.fetchedData !== undefined && this._formatterInitialized) {
-            this._selectedFormatter.update(this.host.shadowRoot, this.fetchedData.rsp);
+        else if (this._fetchedData !== undefined && this._viewerInitialized) {
+            this._selectedFormatter.update();
         }
     }
 
     async componentWillLoad() {
-        this._selectedFormatter = new FormatterMap[this.transformation]({width: this.width, height: this.height, displayFormatter: this.displayFormatter}); 
+
+        let constructor = FormatterMap.MIXED;
+
+        if (this.type !== undefined) {
+            constructor = FormatterMap[this.type.toUpperCase()];
+        }
+
+        if (constructor !== undefined) {
+            this._selectedFormatter = new constructor(this);
+        }
+
+        this._mutationObserver = new MutationObserver((mutations) => {
+            mutations.forEach(async mutation => {
+                if (mutation.type === 'childList') {
+                    await this.datasourceChanged();
+                }
+            })
+        });
+        this._mutationObserver.observe(this.host, { attributes: false, childList: true });
+
         await this.updateWidget();
+
+        // start the timer if the update time is greater than zero
+        if (this.update > 0 && this._fetchedData.rc === RestCode.SUCCESS) {
+            // update the chart
+            this._intervalId = setInterval(async () => { await this.updateWidget(); }, this.update);
+        }
     } 
 
-    private async updateWidget() {
-
-        this.fetchedData = await this.getWidgetData();
-
-        if (this.update >= 0 && this.fetchedData.rc !== RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) {
-            // update the chart
-            this._intervalId = setInterval(async () => { this.fetchedData = await this.getWidgetData(); }, this.update);
-            return;
-        }
+    @Listen('srcChanged')
+    async datasourceChanged() {
         
+        // if there is an active interval timer stop it
+        if (this.update > 0 && this._intervalId) {
+            clearInterval(this._intervalId);
+        }
+
+        await this.updateWidget();
+
+        // start the timer if the update time is greater than zero
+        if (this.update > 0 && this._fetchedData.rc === RestCode.SUCCESS) {
+            // update the chart
+            this._intervalId = setInterval(async () => { await this.updateWidget(); }, this.update);
+        }
+
     }
 
-    @Method()
-    public async forceUpdate() {
-
-        // if there is an interval timer then stops it's execution
-        if (this._intervalId !== undefined) {
-            clearTimeout(this._intervalId);
+    private async updateWidget() {
+        
+        // if a user changed the updating time then stop the interval timer
+        if (this.update <= 0) {
+            clearInterval(this._intervalId);
         }
-        // update the widget
-        await this.updateWidget();
+        
+        this._fetchedData = await this.getWidgetData() as WidgetRestResponse;
     }
 
     /**
      * Serialize the contained <ntop-datasource> into an array of Datasources
      * to be send to the ntopng instance.
      */
-    private serializeDatasources() {
+    private serializeDatasources(): Array<Datasource> {
+    
+        const datasources = new Array<Datasource>();
+        this._containedDatasources = new Array();
 
-        const src: Array<Datasource> = new Array();
-        const datasources = this.host.querySelectorAll('ntop-datasource');
-        
-        datasources.forEach(datasource => {
-             
-            const params: DatasourceParamaters = {};
-            for (let i = 0; i < datasource.attributes.length; i++) {
-                
-                const attribute = datasource.attributes.item(i);
-                if (attribute.name.startsWith("params-")) {
-                    const name = attribute.name.replace("params-", "");
-                    params[name] = attribute.nodeValue.toString();
-                }
-            }
+        this.host.querySelectorAll('ntop-datasource').forEach((ntopDatasource) => {
+       
+            const params = {};
+            this._containedDatasources.push({
+                src: ntopDatasource.src, 
+                styles: JSON.parse(ntopDatasource.styles || "{}"), 
+                type: ntopDatasource.type,
+            });
 
-            src.push({ds_type: datasource.ds_type, params: params});
+            const [src, query] = ntopDatasource.src.split('?');
+            const searchParams = new URLSearchParams('?' + query);
+            searchParams.forEach((value, key) => { params[key] = value });
+
+            const datasource: Datasource = {params: params, ds_type: src};
+            datasources.push(datasource);
         });
 
-        return src;
+        return datasources;
     }
 
     private async getWidgetData() {
@@ -128,14 +167,16 @@ export abstract class NtopWidget {
         const origin: string = window.__NTOPNG_ORIGIN__ || location.origin;
         const endpoint: URL = new URL(this.NTOPNG_ENDPOINT, origin);
 
-        const request: WidgetRequest = {datasources: this.serializeDatasources(), transformation: this.transformation};
+        const headers = {'Content-Type': 'application/json; charset=utf-8'};
+        const transformation = (['pie', 'donut'].includes(this.type)) ? 'aggregate' : 'none'; 
+        const request: WidgetRestRequest = {datasources: this.serializeDatasources(), transformation: transformation};
 
         try {
-            const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), headers: {'Content-Type': 'application/json; charset=utf-8'}});
+            const response = await fetch(endpoint.toString(), {method: 'POST', body: JSON.stringify(request), headers: headers});
             return await response.json();
         }
         catch (e) {
-            console.error(e);
+            console.error(`[ntop-widget][error] :: ${e}`);
             return undefined;
         }
     }
@@ -148,20 +189,24 @@ export abstract class NtopWidget {
     } 
 
     private renderErrorScreen() {
-        return <div class='error'>Error: unknown datasource type!</div>
+
+        // const errorCode: RestCode = this.fetchedData.rc;
+        const message = `[Error][${this._fetchedData.rc}] :: ${this._fetchedData.rc_str_hr || 'Something went wrong...'}`;
+        return <div class='error'>{message}</div>
     }
 
     render() {
 
-        const view = (this.fetchedData === undefined) ? 
-            this.renderLoading() : (this.fetchedData.rc === RestCodes.WIDGETS_UNKNOWN_DATASOURCE_TYPE) ? 
+        const view = (this._fetchedData === undefined) ? 
+            this.renderLoading() : (this._fetchedData.rc < RestCode.SUCCESS) ? 
                 this.renderErrorScreen() : this._selectedFormatter.staticRender();
 
         return (
             <Host>
-                <slot></slot>
-                <div class='ntop-widget-container transparent'> 
+                <div class='ntop-widget-container transparent'>
+                    <slot name='header'></slot>
                     {view}
+                    <slot name='footer'></slot>
                 </div>
             </Host>
         );
