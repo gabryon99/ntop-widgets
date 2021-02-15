@@ -6,8 +6,8 @@ import { h } from '@stencil/core';
 import { Chart, ChartConfiguration } from 'chart.js';
 import { NtopWidget } from '../../components/ntop-widget/ntop-widget';
 import { DisplayFormatter } from '../../types/DisplayFormatter';
-import { ChartFormatter, Formatter } from '../../types/Formatter';
-import { COLOR_PALETTE, formatInt, formatLabel } from '../../utils/utils';
+import { ChartFormatter } from '../../types/Formatter';
+import { COLOR_PALETTE, formatLabel } from '../../utils/utils';
 
 export default class MixedChartWidgetFormatter implements ChartFormatter {
 

@@ -43,7 +43,3 @@ The `update` paramater indicates, in milliseconds, when refresh a widget.
 These are the packages used for ntop-widgets:
 
 * [chart.js](https://www.chartjs.org/) - MIT License
-
-* [chartjs-plugin-datalabels](https://github.com/chartjs/chartjs-plugin-datalabels) - MIT License
-
-* [color-hash](https://github.com/zenozeng/color-hash) - MIT License

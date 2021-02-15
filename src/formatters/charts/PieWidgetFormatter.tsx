@@ -4,10 +4,9 @@
 
 import { h } from '@stencil/core';
 import { ActiveElement, Chart, ChartConfiguration, ChartEvent } from 'chart.js';
-import { ChartFormatter, Formatter } from "../../types/Formatter";
+import { ChartFormatter } from "../../types/Formatter";
 import { NtopWidget } from '../../components/ntop-widget/ntop-widget';
 import { COLOR_PALETTE, formatLabel } from '../../utils/utils';
-import { DisplayFormatter } from '../../types/DisplayFormatter';
 
 /**
  * Define a new chart formatter for Pie Charts.
