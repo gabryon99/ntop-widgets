@@ -2,6 +2,8 @@
  * (C) 2021 - ntop.org
 */
 
+import { Chart } from "chart.js";
+
 export interface Formatter { 
 
     staticRender: () => HTMLElement | Array<HTMLElement>; 
@@ -15,4 +17,10 @@ export interface Formatter {
      * Update the formatter with the data provided.
      */
     update: () => void;
+}
+
+export interface ChartFormatter extends Formatter {
+
+    chart: () => Chart;
+
 }

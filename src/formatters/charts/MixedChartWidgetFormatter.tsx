@@ -3,21 +3,25 @@
 */
 
 import { h } from '@stencil/core';
-import Chart, { ChartConfiguration } from 'chart.js';
+import { Chart, ChartConfiguration } from 'chart.js';
 import { NtopWidget } from '../../components/ntop-widget/ntop-widget';
 import { DisplayFormatter } from '../../types/DisplayFormatter';
-import { Formatter } from '../../types/Formatter';
-import { COLOR_PALETTE, formatInt } from '../../utils/utils';
+import { ChartFormatter, Formatter } from '../../types/Formatter';
+import { COLOR_PALETTE, formatInt, formatLabel } from '../../utils/utils';
 
-export class MixedChartWidgetFormatter implements Formatter {
+export default class MixedChartWidgetFormatter implements ChartFormatter {
 
-    private _chart: Chart;
+    private _chart: Chart<'line'>;
     private _parentWidget: NtopWidget;
     private _shadowRoot: ShadowRoot;
 
     constructor(widget: NtopWidget) {
         this._parentWidget = widget;
     } 
+    
+    public chart(): Chart<'line'> {
+        return this._chart;
+    }
 
     init(shadowRoot: ShadowRoot) {
         
@@ -30,8 +34,8 @@ export class MixedChartWidgetFormatter implements Formatter {
 
         const {datasets, labels} = this.buildDatasets();
 
-        const config: ChartConfiguration = this.loadConfig(datasets, labels);
-        this._chart = new Chart(ctx, config);
+        const config: ChartConfiguration<'line'> = this.loadConfig(datasets, labels);
+        this._chart = new Chart<'line'>(ctx, config);
     }
 
     update() {
@@ -45,7 +49,7 @@ export class MixedChartWidgetFormatter implements Formatter {
         this._chart.data.datasets = datasets;
         this._chart.data.labels = labels;
 
-        this._chart.update({duration: 0, easing: 'easeInOutCubic'});
+        this._chart.update();
     }
 
     staticRender() {
@@ -68,7 +72,9 @@ export class MixedChartWidgetFormatter implements Formatter {
 
             const dataset: any = {
                 label: payload.data.label, 
-                type: ntopDatasource.type, 
+                type: ntopDatasource.type,
+                tension: 0,
+                fill: true,
                 data: payload.data.values.map(value => {
                     if (this._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
                         return (value / total) * 100;
@@ -90,8 +96,7 @@ export class MixedChartWidgetFormatter implements Formatter {
         return {datasets: datasets, labels: firstDatasource.data.keys};
     }
 
-    private loadConfig(datasets: any[], labels: string[]): ChartConfiguration {
-        const self = this;
+    private loadConfig(datasets: any[], labels: string[]): ChartConfiguration<'line'> {
         return {
             type: 'line',
             data: {
@@ -101,56 +106,21 @@ export class MixedChartWidgetFormatter implements Formatter {
             options: {
                 responsive: true,
                 plugins: {
-                    datalabels: {
-                        display: false
-                    }
-                },
-                title: {
-                    display: false,
-                },
-                legend: {
-                    position: 'bottom'
-                },
-                tooltips: {
-                    displayColors: true,
-                    callbacks: {
-                        label: function(tooltip, data) {
-                            
-                            let suffix: string;
-                            const label = data.datasets[tooltip.datasetIndex].label || '';
-                            const value = parseInt(tooltip.value);
-                            
-                            if (value !== NaN) {
-                                if (self._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
-                                    suffix = `: (${parseFloat(tooltip.value).toFixed(2)}%)`;
-                                }
-                                else {
-                                    suffix = `: (${formatInt(value)})`;
-                                }
-                            }
+                    tooltip: {
+                        callbacks: {
+                            label: (tooltip) => {
 
-                            return `${label}${suffix}`;
-                        }
-                    }
-                },
-                scales: {
-                    yAxes: [{
-                        ticks: {
-                            callback: function(value) {
-                                
-                                let tick: string;
+                                const {label, dataset, dataIndex} = tooltip;
+                                const values: number[] = dataset.data as number[];
+                                const total: number = values.reduce((previousValue: number, currentValue: number) => {
+                                    return previousValue + currentValue;
+                                });
+                                const dataPoint = dataset.data[dataIndex] as number;
 
-                                if (self._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
-                                    tick = `${value}%`;
-                                }
-                                else {
-                                    tick = formatInt(value as number);
-                                }
-
-                                return tick;
+                                return `${label}${formatLabel(this._parentWidget.displayFormatter, dataPoint, total)}`;
                             }
                         }
-                    }]
+                    }
                 }
             }
         }

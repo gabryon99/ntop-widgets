@@ -3,29 +3,26 @@
 */
 
 import { h } from '@stencil/core';
-import { ActiveElement, Chart, ChartConfiguration, ChartEvent } from 'chart.js';
+import { Chart, ChartConfiguration } from 'chart.js';
 import { ChartFormatter, Formatter } from "../../types/Formatter";
+import { WidgetResponsePayload } from '../../types/WidgetRestResponse';
+import { DisplayFormatter } from "../../types/DisplayFormatter";
 import { NtopWidget } from '../../components/ntop-widget/ntop-widget';
 import { COLOR_PALETTE, formatLabel } from '../../utils/utils';
-import { DisplayFormatter } from '../../types/DisplayFormatter';
 
 /**
- * Define a new chart formatter for Pie Charts.
- * See: https://www.chartjs.org/docs/latest/charts/doughnut.html
+ * Define a new chart formatter for Radar Charts.
+ * See: https://www.chartjs.org/docs/master/charts/radar
  */
-export default class PieWidgetFormatter implements ChartFormatter {
+export default class RadarChartWidgetFormatter implements ChartFormatter {
 
-    private _chart: Chart<'pie' | 'doughnut'>;
+    private _chart: Chart<'radar'>;
     private _parentWidget: NtopWidget;
     private _shadowRoot: ShadowRoot;
 
     constructor(widget: NtopWidget) {
         this._parentWidget = widget;
     } 
-
-    public chart(): Chart<'pie' | 'doughnut'> {
-        return this._chart;
-    }
 
     public init(shadowRoot: ShadowRoot) { 
 
@@ -34,27 +31,44 @@ export default class PieWidgetFormatter implements ChartFormatter {
         const canvas: HTMLCanvasElement = shadowRoot.getElementById('chart') as HTMLCanvasElement;    
         const ctx = canvas.getContext('2d');
         
-        const pieContainer: HTMLDivElement = shadowRoot.querySelector('.pie-container');
+        const pieContainer: HTMLDivElement = shadowRoot.querySelector('.radar-container');
         pieContainer.style.width = this._parentWidget.width;
         pieContainer.style.height = this._parentWidget.height;
   
         const {datasets, labels} = this.buildDatasets();
 
-        const config: ChartConfiguration<'pie' | 'doughnut'> = this.loadConfig(datasets, labels);
-        this._chart = new Chart<'pie' | 'doughnut'>(ctx, config); 
+        const config: ChartConfiguration<'radar'> = this.loadConfig(datasets, labels);
+        this._chart = new Chart<'radar'>(ctx, config); 
     }
 
     private buildDatasets() {
 
-        const restResponse = this._parentWidget._fetchedData.rsp;
-        const firstDatasource = restResponse[0];
-
+        const datasources = this._parentWidget._fetchedData.rsp;
+        const firstDatasource = datasources[0];
         const labels = firstDatasource.data.keys;
-        const datasets = [{
-            data: firstDatasource.data.values,
-            label: firstDatasource.data.label,
-            backgroundColor: firstDatasource.data.colors || COLOR_PALETTE
-        }];
+
+        let index = 0;
+
+        const datasets = datasources.map(payload => {
+            
+            const selectedColor = COLOR_PALETTE[index++];
+            const total = payload.data.values.reduce((prev, curr) => prev + curr);
+
+            return {
+                label: payload.data.label, 
+                backgroundColor: selectedColor + '90', 
+                borderColor: selectedColor, 
+                pointBackgroundColor: selectedColor, 
+                data: payload.data.values.map(value => {
+                    
+                    if (this._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
+                        return (value / total) * 100;
+                    }
+
+                    return value;
+                }
+            )}
+        });
 
         return {datasets: datasets, labels: labels};
     }
@@ -72,10 +86,9 @@ export default class PieWidgetFormatter implements ChartFormatter {
         this._chart.update();
     }
 
-    protected loadConfig(datasets: any[], labels: string[]): ChartConfiguration<'pie' | 'doughnut'> {
-
+    protected loadConfig(datasets: any[], labels: string[]): ChartConfiguration<'radar'> {
         return {
-            type: 'pie',
+            type: 'radar',
             data: {
                 datasets: datasets,
                 labels: labels
@@ -83,14 +96,7 @@ export default class PieWidgetFormatter implements ChartFormatter {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                animation: {
-                    animateRotate: false
-                },
                 plugins: {
-                    legend: {
-                        display: true,
-                        position: 'left'
-                    },
                     tooltip: {
                         callbacks: {
                             label: (tooltip) => {
@@ -100,23 +106,19 @@ export default class PieWidgetFormatter implements ChartFormatter {
                                 const total: number = values.reduce((previousValue: number, currentValue: number) => {
                                     return previousValue + currentValue;
                                 });
-    
-                                return `${label}${formatLabel(this._parentWidget.displayFormatter, dataPoint, total)}`;
+
+                                return `${label}${formatLabel(this._parentWidget.displayFormatter, dataPoint.r, total)}`;
                             }
                         }
                     }
-                },
-                onClick: (_: ChartEvent, __: ActiveElement[]) => {
-                    const restResponse = this._parentWidget._fetchedData.rsp;
-                    if (restResponse[0].metadata.url !== undefined) {
-                        window.location.href = restResponse[0].metadata.url;
-                    }
-                },
+                }
             }
         };
     }
 
+    public chart() { return this._chart; }
+
     public staticRender() {
-        return [<div class='pie-container'><canvas id='chart'></canvas></div>];
+        return [<div class='radar-container'><canvas id='chart'></canvas></div>];
     }
 }

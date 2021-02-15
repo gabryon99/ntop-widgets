@@ -2,31 +2,31 @@
 * (C) 2021 - ntop.org
 */
 
-import Chart from "chart.js";
-
 import { h } from "@stencil/core";
-import { ChartConfiguration } from "chart.js";
+import { Chart, ChartConfiguration } from "chart.js";
 import { NtopWidget } from "../../components/ntop-widget/ntop-widget";
 import { DisplayFormatter } from "../../types/DisplayFormatter";
-import { Formatter } from "../../types/Formatter";
-import { COLOR_PALETTE, formatInt } from "../../utils/utils";
-import { Datasource } from "../../types/Datasource";
-import { WidgetRestResponse } from "../../types/WidgetRestResponse";
+import { ChartFormatter } from "../../types/Formatter";
+import { COLOR_PALETTE } from "../../utils/utils";
 
 /**
 * Define a new chart formatter for Bar Charts.
 * See: https://www.chartjs.org/docs/latest/charts/bar.html
 */
-export default class StackedBarWidgetFormatter implements Formatter {
+export default class StackedBarWidgetFormatter implements ChartFormatter {
 
     private _parentWidget: NtopWidget;
-    private _chart: Chart;
+    private _chart: Chart<'bar'>;
     private _shadowRoot: ShadowRoot;
 
     constructor(widget: NtopWidget) {
         this._parentWidget = widget;
     } 
     
+    public chart(): Chart<'bar'> {
+        return this._chart;
+    }
+
     init(shadowRoot: ShadowRoot) {
         
         this._shadowRoot = shadowRoot;
@@ -39,9 +39,9 @@ export default class StackedBarWidgetFormatter implements Formatter {
         const ctx = canvas.getContext('2d');
 
         const {datasets, labels} = this.buildDatasets();
-        const config: ChartConfiguration = this.loadConfig(datasets, labels);
+        const config: ChartConfiguration<'bar'> = this.loadConfig(datasets, labels);
 
-        this._chart = new Chart(ctx, config); 
+        this._chart = new Chart<'bar'>(ctx, config); 
     }
 
     private buildDatasets() {
@@ -75,12 +75,11 @@ export default class StackedBarWidgetFormatter implements Formatter {
         this._chart.data.datasets = datasets;
         this._chart.data.labels = labels;
 
-        this._chart.update({duration: 0, easing: 'easeInOutCubic'});
+        this._chart.update();
     }
 
-    protected loadConfig(datasets: Array<any>, labels: Array<string>): ChartConfiguration {
+    protected loadConfig(datasets: Array<any>, labels: Array<string>): ChartConfiguration<'bar'> {
 
-        const self = this;
         const formattedDatasets = this.formatDataByDisplay(datasets);
 
         return {
@@ -90,59 +89,14 @@ export default class StackedBarWidgetFormatter implements Formatter {
                 labels: labels
             },
             options: {
-                plugins: {
-                    datalabels: {
-                        display: false
-                    }
-                },
                 maintainAspectRatio: false,
-                legend: {
-                    position: 'bottom'
-                },
-                tooltips: {
-                    displayColors: true,
-                    callbacks: {
-                        label: function(tooltip, data) {
-                            
-                            let suffix: string;
-                            const label = data.datasets[tooltip.datasetIndex].label || '';
-                            const value = parseInt(tooltip.value);
-                            
-                            if (value !== NaN) {
-                                if (self._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
-                                    suffix = `: (${parseFloat(tooltip.value).toFixed(2)}%)`;
-                                }
-                                else {
-                                    suffix = `: (${formatInt(value)})`;
-                                }
-                            }
-
-                            return `${label}${suffix}`;
-                        }
-                    }
-                },
                 scales: {
-                    xAxes: [{
-                        gridLines: {display: false,}, stacked: true
-                    }],
-                    yAxes: [{
-                        stacked: true,
-                        ticks: {
-                            callback: function(value) {
-                                
-                                let tick: string;
-
-                                if (self._parentWidget.displayFormatter === DisplayFormatter.PERCENTAGE) {
-                                    tick = `${value}%`;
-                                }
-                                else {
-                                    tick = formatInt(value as number);
-                                }
-
-                                return tick;
-                            }
-                        }
-                    }]
+                    x: {
+                        stacked: true
+                    },
+                    y: {
+                        stacked: true
+                    }
                 }
             }
         }
